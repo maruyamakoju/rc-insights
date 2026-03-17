@@ -1,4 +1,11 @@
-"""Generate a terminal-style demo video with typing animation for rc-insights."""
+"""Generate a polished terminal-style demo video for rc-insights.
+
+Features:
+- CascadiaMono font, 1080p, smooth typing animation
+- Real Dark Noise data in all outputs
+- AI analysis showcase (the killer feature)
+- ~90 seconds, 14 scenes
+"""
 
 import os
 import shutil
@@ -8,23 +15,29 @@ from PIL import Image, ImageDraw, ImageFont
 
 # --- Video settings ---
 WIDTH, HEIGHT = 1920, 1080
-FPS = 15
-BG = (15, 15, 35)
-WHITE = (224, 224, 224)
-GREEN = (29, 185, 84)
-CYAN = (0, 212, 255)
-DIM = (100, 100, 120)
-YELLOW = (255, 214, 10)
-RED = (255, 95, 86)
-ORANGE = (255, 160, 50)
+FPS = 24
+BG = (13, 17, 23)  # GitHub dark theme
+PANEL_BG = (22, 27, 34)
+WHITE = (230, 237, 243)
+GREEN = (63, 185, 80)
+CYAN = (121, 192, 255)
+DIM = (125, 133, 144)
+YELLOW = (229, 192, 123)
+RED = (255, 123, 114)
+ORANGE = (255, 166, 87)
+MAGENTA = (188, 140, 255)
+BRIGHT_GREEN = (56, 229, 77)
+PROMPT_COLOR = (88, 166, 255)
 
-FONT_PATH = "C:/Windows/Fonts/consola.ttf"
-FONT = ImageFont.truetype(FONT_PATH, 20)
-FONT_BIG = ImageFont.truetype(FONT_PATH, 44)
-FONT_MED = ImageFont.truetype(FONT_PATH, 26)
-FONT_SM = ImageFont.truetype(FONT_PATH, 16)
-LINE_H = 28
-MX, MY = 40, 80  # margins
+FONT_PATH = "C:/Windows/Fonts/CascadiaMono.ttf"
+FONT = ImageFont.truetype(FONT_PATH, 18)
+FONT_BIG = ImageFont.truetype(FONT_PATH, 52)
+FONT_HERO = ImageFont.truetype(FONT_PATH, 72)
+FONT_MED = ImageFont.truetype(FONT_PATH, 24)
+FONT_SM = ImageFont.truetype(FONT_PATH, 15)
+FONT_TAG = ImageFont.truetype(FONT_PATH, 20)
+LINE_H = 26
+MX, MY = 48, 70
 
 
 class TermRenderer:
@@ -36,12 +49,18 @@ class TermRenderer:
     def _base_frame(self, title=""):
         img = Image.new("RGB", (WIDTH, HEIGHT), BG)
         draw = ImageDraw.Draw(img)
-        # Window chrome
-        draw.rounded_rectangle([16, 12, WIDTH - 16, 52], radius=10, fill=(30, 30, 60))
+        # macOS-style window chrome
+        bar_h = 44
+        draw.rounded_rectangle([0, 0, WIDTH, bar_h], radius=0, fill=(30, 35, 44))
+        # Traffic lights
         for i, c in enumerate([(255, 95, 86), (255, 189, 46), (39, 201, 63)]):
-            draw.ellipse([32 + i * 26, 22, 48 + i * 26, 38], fill=c)
+            cx = 24 + i * 24
+            draw.ellipse([cx, 14, cx + 16, 30], fill=c)
         if title:
-            draw.text((WIDTH // 2 - len(title) * 5, 22), title, fill=DIM, font=FONT_SM)
+            tw = draw.textlength(title, font=FONT_SM)
+            draw.text((WIDTH // 2 - tw // 2, 14), title, fill=DIM, font=FONT_SM)
+        # Subtle terminal border
+        draw.line([(0, bar_h), (WIDTH, bar_h)], fill=(48, 54, 61), width=1)
         return img, draw
 
     def _draw_lines(self, draw, lines, start_y=MY):
@@ -55,11 +74,11 @@ class TermRenderer:
         return y
 
     def _draw_cursor(self, draw, x, y, frame_idx):
-        if (frame_idx // 7) % 2 == 0:
-            draw.rectangle([x, y, x + 12, y + LINE_H - 4], fill=GREEN)
+        # Smooth blink
+        if (frame_idx // 12) % 2 == 0:
+            draw.rectangle([x, y + 2, x + 10, y + LINE_H - 4], fill=CYAN)
 
     def add_static(self, lines, title="", duration=3.0):
-        """Add a static scene."""
         n = int(duration * FPS)
         img, draw = self._base_frame(title)
         self._draw_lines(draw, lines)
@@ -67,9 +86,7 @@ class TermRenderer:
             self.frames.append(img)
 
     def add_typing_scene(self, steps, title="", chars_per_frame=2):
-        """steps: list of (action, data) where action is 'type', 'output', 'pause', 'clear'."""
-        buffer = []  # list of (text, color) tuples
-        cursor_line = 0
+        buffer = []
         global_frame = len(self.frames)
 
         for action, data in steps:
@@ -78,11 +95,9 @@ class TermRenderer:
                 for fi in range(n):
                     img, draw = self._base_frame(title)
                     self._draw_lines(draw, buffer)
-                    y = MY + len(buffer) * LINE_H
-                    # cursor at end of last line
                     if buffer:
                         last_text = buffer[-1][0]
-                        cx = MX + len(last_text) * 10
+                        cx = MX + draw.textlength(last_text, font=FONT)
                         cy = MY + (len(buffer) - 1) * LINE_H
                     else:
                         cx, cy = MX, MY
@@ -92,27 +107,25 @@ class TermRenderer:
 
             elif action == "type":
                 text, color = data if isinstance(data, tuple) else (data, GREEN)
-                typed = ""
                 for ci in range(0, len(text), chars_per_frame):
                     typed = text[:ci + chars_per_frame]
                     img, draw = self._base_frame(title)
                     self._draw_lines(draw, buffer)
                     y = MY + len(buffer) * LINE_H
                     draw.text((MX, y), typed, fill=color, font=FONT)
-                    cx = MX + len(typed) * 10
+                    cx = MX + draw.textlength(typed, font=FONT)
                     self._draw_cursor(draw, cx, y, global_frame)
                     self.frames.append(img)
                     global_frame += 1
                 buffer.append((text, color))
-                # brief pause after typing
-                for fi in range(3):
+                # Brief pause after line
+                for fi in range(4):
                     img, draw = self._base_frame(title)
                     self._draw_lines(draw, buffer)
                     self.frames.append(img)
                     global_frame += 1
 
             elif action == "output":
-                # instant output lines
                 if isinstance(data, list):
                     for line in data:
                         if isinstance(line, tuple):
@@ -121,8 +134,7 @@ class TermRenderer:
                             buffer.append((line, WHITE))
                 else:
                     buffer.append((data, WHITE) if isinstance(data, str) else data)
-                # render 2 frames for the output appearing
-                for fi in range(2):
+                for fi in range(3):
                     img, draw = self._base_frame(title)
                     self._draw_lines(draw, buffer)
                     self.frames.append(img)
@@ -131,57 +143,163 @@ class TermRenderer:
             elif action == "clear":
                 buffer = []
 
-    def add_title_card(self, duration=5.0):
+    def add_hero_card(self, duration=5.0):
+        """Cinematic title card with gradient feel."""
         n = int(duration * FPS)
         for fi in range(n):
             img = Image.new("RGB", (WIDTH, HEIGHT), BG)
             draw = ImageDraw.Draw(img)
-            # fade in
-            alpha = min(1.0, fi / (FPS * 1.0))
+            alpha = min(1.0, fi / (FPS * 0.8))
+
+            # Subtle gradient bar at top
+            for y in range(6):
+                a = int(alpha * (255 - y * 40))
+                c = (0, max(0, min(255, a // 3)), max(0, min(255, a)))
+                draw.line([(0, y), (WIDTH, y)], fill=c)
+
             c = tuple(int(v * alpha) for v in CYAN)
             g = tuple(int(v * alpha) for v in GREEN)
             w = tuple(int(v * alpha) for v in WHITE)
             d = tuple(int(v * alpha) for v in DIM)
+            m = tuple(int(v * alpha) for v in MAGENTA)
 
-            draw.text((WIDTH // 2 - 260, 280), "rc-insights", fill=c, font=FONT_BIG)
-            draw.text((WIDTH // 2 - 380, 360), "Python SDK + CLI for RevenueCat Charts API v2", fill=w, font=FONT_MED)
-            draw.text((WIDTH // 2 - 260, 420), "────────────────────────────────", fill=d, font=FONT)
-            draw.text((WIDTH // 2 - 300, 480), "21 chart types · Segmentation · HTML Reports", fill=g, font=FONT)
-            draw.text((WIDTH // 2 - 310, 530), "Built by Claude (AI Agent) for @maruyamakoju", fill=d, font=FONT)
+            # Hero title
+            title = "rc-insights"
+            tw = draw.textlength(title, font=FONT_HERO)
+            draw.text((WIDTH // 2 - tw // 2, 240), title, fill=c, font=FONT_HERO)
+
+            # Subtitle
+            sub = "Python SDK, CLI & AI Analyzer for RevenueCat Charts API v2"
+            sw = draw.textlength(sub, font=FONT_MED)
+            draw.text((WIDTH // 2 - sw // 2, 340), sub, fill=w, font=FONT_MED)
+
+            # Divider
+            div = "━" * 50
+            dw = draw.textlength(div, font=FONT_TAG)
+            draw.text((WIDTH // 2 - dw // 2, 400), div, fill=d, font=FONT_TAG)
+
+            # Feature tags
+            tags = [
+                ("21 Charts", g), ("AI Analysis", m), ("HTML Reports", c),
+                ("CLI", g), ("Typed SDK", c),
+            ]
+            total_w = sum(draw.textlength(t, font=FONT_TAG) + 40 for t, _ in tags) - 40
+            tx = WIDTH // 2 - total_w // 2
+            for tag_text, tag_color in tags:
+                tw = draw.textlength(tag_text, font=FONT_TAG)
+                # Tag pill background
+                pill_color = tuple(max(0, v // 5) for v in tag_color)
+                draw.rounded_rectangle(
+                    [tx - 10, 460, tx + tw + 10, 490], radius=6, fill=pill_color
+                )
+                draw.text((tx, 464), tag_text, fill=tag_color, font=FONT_TAG)
+                tx += tw + 40
+
+            # Attribution
+            attr = "Built by Claude (AI Agent) · Operator: @maruyamakoju"
+            aw = draw.textlength(attr, font=FONT_SM)
+            draw.text((WIDTH // 2 - aw // 2, 560), attr, fill=d, font=FONT_SM)
+
+            # pip install
+            pip_text = "pip install rc-insights"
+            pw = draw.textlength(pip_text, font=FONT_MED)
+            draw.rounded_rectangle(
+                [WIDTH // 2 - pw // 2 - 20, 620, WIDTH // 2 + pw // 2 + 20, 660],
+                radius=8, fill=(22, 27, 34), outline=tuple(int(v * alpha * 0.3) for v in GREEN),
+            )
+            draw.text((WIDTH // 2 - pw // 2, 628), pip_text, fill=g, font=FONT_MED)
+
             self.frames.append(img)
 
-    def add_transition(self, n_frames=8):
-        """Fade to black transition."""
+    def add_transition(self, n_frames=12):
         if not self.frames:
             return
         last = self.frames[-1].copy()
+        bg_img = Image.new("RGB", (WIDTH, HEIGHT), BG)
         for fi in range(n_frames):
             alpha = 1.0 - (fi / n_frames)
-            overlay = Image.new("RGB", (WIDTH, HEIGHT), BG)
-            blended = Image.blend(overlay, last, alpha)
+            blended = Image.blend(bg_img, last, alpha)
             self.frames.append(blended)
+
+    def add_section_title(self, title, subtitle="", duration=2.0):
+        """Section divider with title."""
+        n = int(duration * FPS)
+        for fi in range(n):
+            img = Image.new("RGB", (WIDTH, HEIGHT), BG)
+            draw = ImageDraw.Draw(img)
+            alpha = min(1.0, fi / (FPS * 0.4))
+
+            c = tuple(int(v * alpha) for v in CYAN)
+            w = tuple(int(v * alpha) for v in WHITE)
+            d = tuple(int(v * alpha) for v in DIM)
+
+            tw = draw.textlength(title, font=FONT_BIG)
+            draw.text((WIDTH // 2 - tw // 2, HEIGHT // 2 - 50), title, fill=c, font=FONT_BIG)
+
+            if subtitle:
+                sw = draw.textlength(subtitle, font=FONT_TAG)
+                draw.text((WIDTH // 2 - sw // 2, HEIGHT // 2 + 30), subtitle, fill=d, font=FONT_TAG)
+
+            self.frames.append(img)
 
     def add_closing(self, duration=5.0):
         n = int(duration * FPS)
         for fi in range(n):
             img = Image.new("RGB", (WIDTH, HEIGHT), BG)
             draw = ImageDraw.Draw(img)
-            alpha = min(1.0, fi / (FPS * 0.8))
-            g = tuple(int(v * alpha) for v in GREEN)
+            alpha = min(1.0, fi / (FPS * 0.6))
+
             c = tuple(int(v * alpha) for v in CYAN)
+            g = tuple(int(v * alpha) for v in GREEN)
             w = tuple(int(v * alpha) for v in WHITE)
             d = tuple(int(v * alpha) for v in DIM)
+            m = tuple(int(v * alpha) for v in MAGENTA)
             y = tuple(int(v * alpha) for v in YELLOW)
 
-            draw.text((MX + 200, 200), "pip install rc-insights", fill=g, font=FONT_MED)
-            draw.text((MX + 200, 280), "github.com/maruyamakoju/rc-insights", fill=c, font=FONT)
-            draw.text((MX + 200, 340), "21 chart types · Segmentation · Filtering", fill=w, font=FONT)
-            draw.text((MX + 200, 380), "CLI · Python SDK · HTML Reports · 13 Tests", fill=w, font=FONT)
-            draw.text((MX + 200, 450), "─────────────────────────────────────────", fill=d, font=FONT)
-            draw.text((MX + 200, 490), "Built by Claude (AI Agent, Anthropic)", fill=d, font=FONT)
-            draw.text((MX + 200, 530), "Operator: @maruyamakoju", fill=d, font=FONT)
-            draw.text((MX + 200, 570), "Powered by RevenueCat Charts API v2", fill=d, font=FONT)
-            draw.text((MX + 200, 640), "★ Star the repo. Open an issue. Build something cool.", fill=y, font=FONT)
+            # pip install box
+            pip = "pip install rc-insights"
+            pw = draw.textlength(pip, font=FONT_BIG)
+            draw.rounded_rectangle(
+                [WIDTH // 2 - pw // 2 - 30, 180, WIDTH // 2 + pw // 2 + 30, 240],
+                radius=10, fill=PANEL_BG, outline=tuple(int(v * alpha * 0.4) for v in GREEN),
+            )
+            draw.text((WIDTH // 2 - pw // 2, 188), pip, fill=g, font=FONT_BIG)
+
+            # Links
+            items = [
+                ("GitHub", "github.com/maruyamakoju/rc-insights", c),
+                ("Live Demo", "maruyamakoju.github.io/rc-insights", c),
+                ("PyPI", "pypi.org/project/rc-insights", c),
+            ]
+            for i, (label, url, color) in enumerate(items):
+                ly = 300 + i * 40
+                draw.text((MX + 200, ly), f"{label}:", fill=d, font=FONT_TAG)
+                draw.text((MX + 360, ly), url, fill=color, font=FONT_TAG)
+
+            # Divider
+            div_y = 440
+            draw.line([(MX + 200, div_y), (WIDTH - MX - 200, div_y)], fill=d, width=1)
+
+            # Feature summary
+            features = [
+                "21 Chart Types · Typed Python SDK · Rate-Limit Retry",
+                "CLI with Rich Output · JSON Export · Segmentation & Filtering",
+                "AI-Powered Analysis via Claude · Interactive HTML Reports",
+                "20 Unit Tests · Real Dark Noise Data · MIT License",
+            ]
+            for i, feat in enumerate(features):
+                fw = draw.textlength(feat, font=FONT)
+                draw.text((WIDTH // 2 - fw // 2, 470 + i * 30), feat, fill=w, font=FONT)
+
+            # Bottom
+            draw.text((MX + 200, 640), "Built by Claude (Anthropic, Opus 4.6)", fill=d, font=FONT)
+            draw.text((MX + 200, 670), "Operator: @maruyamakoju", fill=d, font=FONT)
+            draw.text((MX + 200, 700), "Powered by RevenueCat Charts API v2", fill=d, font=FONT)
+
+            cta = "★ Star the repo · Try it today · Build something amazing"
+            cw = draw.textlength(cta, font=FONT_TAG)
+            draw.text((WIDTH // 2 - cw // 2, 780), cta, fill=y, font=FONT_TAG)
+
             self.frames.append(img)
 
     def export(self, path):
@@ -189,251 +307,268 @@ class TermRenderer:
         print(f"Rendering {len(self.frames)} frames to {tmpdir}")
         for i, frame in enumerate(self.frames):
             frame.save(os.path.join(tmpdir, f"f_{i:05d}.png"))
+            if i % 200 == 0:
+                print(f"  Frame {i}/{len(self.frames)}")
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         cmd = [
             "ffmpeg", "-y", "-framerate", str(FPS),
             "-i", os.path.join(tmpdir, "f_%05d.png"),
             "-c:v", "libx264", "-pix_fmt", "yuv420p",
-            "-preset", "medium", "-crf", "22", path,
+            "-preset", "medium", "-crf", "20", path,
         ]
         print("Running ffmpeg...")
         subprocess.run(cmd, check=True, capture_output=True)
         size = os.path.getsize(path)
         dur = len(self.frames) / FPS
-        print(f"Video: {path} ({dur:.1f}s, {size // 1024}KB, {len(self.frames)} frames)")
+        print(f"Done: {path} ({dur:.1f}s, {size // 1024}KB, {len(self.frames)} frames)")
         shutil.rmtree(tmpdir)
 
 
 def main():
     t = TermRenderer()
 
-    # --- Scene 1: Title card (5s) ---
-    t.add_title_card(5.0)
+    # ===== Scene 1: Hero title card (4s) =====
+    t.add_hero_card(4.0)
     t.add_transition()
 
-    # --- Scene 2: The Problem (7s) ---
+    # ===== Scene 2: The Problem (5s) =====
+    t.add_section_title("The Problem", "Subscription data is trapped in dashboards", 2.0)
+    t.add_transition(6)
     t.add_typing_scene([
-        ("type", ("# The Problem", CYAN)),
-        ("pause", 0.5),
+        ("type", ("# Your subscription data is stuck in a dashboard.", DIM)),
+        ("pause", 0.3),
         ("output", [
             ("", WHITE),
-            ("Your subscription data is trapped in a dashboard.", WHITE),
-            ("You can't script it. You can't automate it.", WHITE),
-            ("You can't feed it to an AI agent.", WHITE),
+            ("  ✗ Can't script weekly reports", RED),
+            ("  ✗ Can't automate churn alerts", RED),
+            ("  ✗ Can't feed metrics to AI agents", RED),
             ("", WHITE),
-            ("RevenueCat's Charts API v2 changes that.", GREEN),
-            ("21 chart endpoints. Segmentation. Filtering.", GREEN),
-            ("", WHITE),
-            ("But raw HTTP calls are tedious...", DIM),
-            ("rc-insights makes it simple.", CYAN),
+            ("  RevenueCat Charts API v2 solves this.", CYAN),
+            ("  rc-insights makes it effortless.", GREEN),
         ]),
-        ("pause", 2.5),
+        ("pause", 2.0),
     ], title="The Problem")
     t.add_transition()
 
-    # --- Scene 3: Installation (7s) ---
+    # ===== Scene 3: Install (4s) =====
     t.add_typing_scene([
-        ("type", ("$ pip install rc-insights", GREEN)),
+        ("type", ("$ pip install rc-insights", PROMPT_COLOR)),
         ("pause", 0.3),
         ("output", [
             ("Collecting rc-insights", DIM),
-            ("  Downloading rc_insights-0.1.0-py3-none-any.whl (12 kB)", DIM),
-            ("Installing collected packages: httpx, click, rich, plotly, rc-insights", DIM),
+            ("  Using cached rc_insights-0.1.0-py3-none-any.whl (14 kB)", DIM),
             ("Successfully installed rc-insights-0.1.0", GREEN),
         ]),
-        ("pause", 0.8),
-        ("type", ("$ export REVENUECAT_API_KEY=sk_...", GREEN)),
-        ("type", ("$ export REVENUECAT_PROJECT_ID=proj...", GREEN)),
-        ("pause", 0.5),
-        ("output", [("", WHITE), ("✓ One pip install. Two env vars. Ready to go.", GREEN)]),
-        ("pause", 1.5),
+        ("pause", 0.3),
+        ("type", ("$ export REVENUECAT_API_KEY=sk_...", PROMPT_COLOR)),
+        ("type", ("$ export REVENUECAT_PROJECT_ID=proj...", PROMPT_COLOR)),
+        ("pause", 0.3),
+        ("output", [("", WHITE), ("Ready. ✓", BRIGHT_GREEN)]),
+        ("pause", 1.0),
     ], title="Installation")
     t.add_transition()
 
-    # --- Scene 4: Overview command (10s) ---
+    # ===== Scene 4: Overview (6s) =====
     t.add_typing_scene([
-        ("type", ("$ rc-insights overview", GREEN)),
+        ("type", ("$ rc-insights overview", PROMPT_COLOR)),
         ("pause", 0.5),
         ("output", [
             ("", WHITE),
-            ("┌──────────────────────────────────────────────────────┐", CYAN),
-            ("│              RevenueCat Overview                     │", CYAN),
-            ("├────────────────────────┬───────────┬─────────────────┤", CYAN),
-            ("│ Metric                 │     Value │ Period          │", CYAN),
-            ("├────────────────────────┼───────────┼─────────────────┤", CYAN),
+            ("┌──────────────────────────────────────────┬───────────┬────────┐", CYAN),
+            ("│ Metric                                   │     Value │ Period │", CYAN),
+            ("├──────────────────────────────────────────┼───────────┼────────┤", CYAN),
+            ("│ Active Trials                            │        67 │ P0D    │", WHITE),
+            ("│ Active Subscriptions                     │     2,527 │ P0D    │", WHITE),
+            ("│ MRR                                      │ $4,551.00 │ P28D   │", GREEN),
+            ("│ Revenue                                  │ $5,150.00 │ P28D   │", GREEN),
+            ("│ New Customers                            │     1,566 │ P28D   │", WHITE),
+            ("│ Active Users                             │    13,858 │ P28D   │", WHITE),
+            ("│ Transactions (28d)                       │       621 │ P28D   │", WHITE),
+            ("└──────────────────────────────────────────┴───────────┴────────┘", CYAN),
         ]),
         ("pause", 0.3),
-        ("output", [
-            ("│ Active Trials          │        65 │ P0D             │", WHITE),
-            ("│ Active Subscriptions   │     2,529 │ P0D             │", WHITE),
-            ("│ MRR                    │ $4,557.00 │ P28D            │", GREEN),
-            ("│ Revenue                │ $5,105.00 │ P28D            │", GREEN),
-            ("│ New Customers          │     1,572 │ P28D            │", WHITE),
-            ("│ Active Users           │    13,957 │ P28D            │", WHITE),
-            ("│ Transactions (28d)     │       616 │ P28D            │", WHITE),
-            ("└────────────────────────┴───────────┴─────────────────┘", CYAN),
-        ]),
-        ("pause", 0.5),
-        ("output", [("", WHITE), ("  Real data from Dark Noise — all metrics, one command.", DIM)]),
+        ("output", [("", WHITE), ("  ↑ Real data from Dark Noise (iOS white noise app)", DIM)]),
         ("pause", 2.0),
-    ], title="rc-insights overview")
+    ], title="rc-insights overview — Real Dark Noise Data")
     t.add_transition()
 
-    # --- Scene 5: MRR Chart (10s) ---
+    # ===== Scene 5: MRR Chart (6s) =====
     t.add_typing_scene([
-        ("type", ("$ rc-insights chart mrr --start 2025-01-01 --end 2025-12-31", GREEN)),
+        ("type", ("$ rc-insights chart mrr --start 2024-01-01 --end 2025-12-31", PROMPT_COLOR)),
         ("pause", 0.5),
         ("output", [
             ("", WHITE),
-            ("                  MRR (month)                          ", CYAN),
+            ("              MRR (month)               ", CYAN),
             ("┌────────────┬────────────┐", CYAN),
             ("│ Date       │        MRR │", CYAN),
             ("├────────────┼────────────┤", CYAN),
-        ]),
-        ("pause", 0.2),
-        ("output", [
-            ("│ 2025-01-01 │  $4,505.42 │", WHITE),
-            ("│ 2025-02-01 │  $4,583.13 │", WHITE),
-            ("│ 2025-03-01 │  $4,636.80 │", GREEN),
+            ("│ 2024-01-01 │  $4,096.90 │", WHITE),
+            ("│ 2024-04-01 │  $4,972.26 │", GREEN),
+            ("│ 2024-07-01 │  $4,844.92 │", WHITE),
+            ("│ 2024-10-01 │  $4,771.70 │", WHITE),
+            ("│ 2025-01-01 │  $4,505.42 │", ORANGE),
             ("│ 2025-04-01 │  $4,696.96 │", GREEN),
-            ("│ 2025-05-01 │  $4,669.40 │", WHITE),
-            ("│ 2025-06-01 │  $4,559.29 │", ORANGE),
             ("│ 2025-07-01 │  $4,623.17 │", WHITE),
-            ("│ 2025-08-01 │  $4,587.34 │", WHITE),
-            ("│ 2025-09-01 │  $4,460.63 │", ORANGE),
             ("│ 2025-10-01 │  $4,322.58 │", ORANGE),
-            ("│ 2025-11-01 │  $4,421.66 │", GREEN),
             ("│ 2025-12-01 │  $4,411.46 │", WHITE),
             ("└────────────┴────────────┘", CYAN),
+            ("  Average: $4,597.69 | Growth: +7.7%", DIM),
         ]),
-        ("pause", 0.5),
-        ("output", [
-            ("  Average: $4,539.68  Total: $54,476.22", DIM),
-        ]),
-        ("pause", 2.0),
-    ], title="Chart: MRR")
+        ("pause", 2.5),
+    ], title="Chart: MRR Trend (24 months)")
     t.add_transition()
 
-    # --- Scene 6: JSON output (6s) ---
-    t.add_typing_scene([
-        ("type", ("$ rc-insights chart mrr -j | jq '.values[-3:]'", GREEN)),
-        ("pause", 0.4),
-        ("output", [
-            ("", WHITE),
-            ("[", YELLOW),
-            ('  4322.58,', YELLOW),
-            ('  4421.66,', YELLOW),
-            ('  4411.46', YELLOW),
-            ("]", YELLOW),
-        ]),
-        ("pause", 0.5),
-        ("output", [
-            ("", WHITE),
-            ("  Pipe to jq, pandas, or feed to an AI agent.", DIM),
-        ]),
-        ("pause", 2.0),
-    ], title="JSON Output")
-    t.add_transition()
-
-    # --- Scene 7: Python SDK (12s) ---
+    # ===== Scene 6: Python SDK (5s) =====
     t.add_typing_scene([
         ("type", (">>> from rc_insights import RCInsights", YELLOW)),
         ("type", (">>> rc = RCInsights(api_key='sk_...', project_id='proj...')", YELLOW)),
-        ("pause", 0.3),
         ("type", (">>> overview = rc.overview()", YELLOW)),
         ("type", ('>>> print(f"MRR: {overview[\'mrr\'].formatted_value}")', YELLOW)),
-        ("output", [("MRR: $4,557.00", GREEN)]),
-        ("pause", 0.5),
-        ("type", (">>> mrr = rc.chart('mrr', start_date='2025-01-01',", YELLOW)),
+        ("output", [("MRR: $4,551.00", GREEN)]),
+        ("pause", 0.3),
+        ("type", (">>> mrr = rc.chart('mrr', start_date='2024-01-01',", YELLOW)),
         ("type", ("...                end_date='2025-12-31', resolution='month')", YELLOW)),
-        ("type", (">>> for date, value in mrr.to_series()[-3:]:", YELLOW)),
-        ("type", ("...     print(f'  {date}: ${value:,.2f}')", YELLOW)),
-        ("output", [
-            ("  2025-10-01: $4,322.58", WHITE),
-            ("  2025-11-01: $4,421.66", WHITE),
-            ("  2025-12-01: $4,411.46", WHITE),
-        ]),
-        ("pause", 0.5),
-        ("output", [("", WHITE), ("  Typed dataclasses. No JSON wrangling needed.", DIM)]),
-        ("pause", 2.0),
+        ("type", (">>> series = mrr.to_series()", YELLOW)),
+        ("type", (">>> len(series)  # 24 months of data", YELLOW)),
+        ("output", [("24", WHITE)]),
+        ("pause", 0.3),
+        ("output", [("", WHITE), ("  Typed dataclasses. Rate-limit retry. Zero boilerplate.", DIM)]),
+        ("pause", 1.5),
     ], title="Python SDK", chars_per_frame=3)
     t.add_transition()
 
-    # --- Scene 8: Segmentation (8s) ---
+    # ===== Scene 7: THE KILLER FEATURE — AI Analysis (14s) =====
+    t.add_section_title(
+        "AI-Powered Analysis",
+        "The feature that makes rc-insights more than a wrapper",
+        2.5,
+    )
+    t.add_transition(6)
+
     t.add_typing_scene([
-        ("type", (">>> revenue = rc.chart('revenue', segment='country',", YELLOW)),
-        ("type", ("...     start_date='2025-01-01', end_date='2025-12-31')", YELLOW)),
-        ("pause", 0.3),
+        ("type", ("$ rc-insights analyze --start 2024-01-01 --end 2025-12-31", PROMPT_COLOR)),
+        ("pause", 0.5),
         ("output", [
-            ("", WHITE),
-            ("# Segmentation by country, platform, store, product...", DIM),
-            ("# Filter to specific stores:", DIM),
+            ("Fetching overview metrics...", CYAN),
+            ("Fetching charts for analysis...", CYAN),
+            ("  ✓ mrr", GREEN),
+            ("  ✓ revenue", GREEN),
+            ("  ✓ churn", GREEN),
+            ("  ✓ actives", GREEN),
+            ("  ✓ trial_conversion_rate", GREEN),
+            ("  ✓ ltv_per_paying_customer", GREEN),
+            ("  ✓ actives_new", GREEN),
+            ("  ✓ trials", GREEN),
+            ("  ✓ customers_new", GREEN),
+            ("Analyzing with Claude (claude-sonnet-4-20250514)...", CYAN),
         ]),
-        ("type", (">>> mrr_ios = rc.chart('mrr', filters={'store': 'app_store'})", YELLOW)),
-        ("pause", 0.3),
-        ("output", [
-            ("", WHITE),
-            ("  21 charts × unlimited segments × flexible filters", GREEN),
-            ("  Programmatic access to your full analytics stack.", DIM),
-        ]),
-        ("pause", 2.0),
-    ], title="Segmentation & Filtering")
+        ("pause", 1.0),
+    ], title="rc-insights analyze — AI-Powered Strategic Analysis")
+    t.add_transition(6)
+
+    # AI analysis output - part 1
+    t.add_static([
+        ("╭─────────────────── AI Subscription Analysis ───────────────────╮", MAGENTA),
+        ("│                                                                │", MAGENTA),
+        ("│  Executive Summary                                             │", CYAN),
+        ("│                                                                │", MAGENTA),
+        ("│  MRR grew modestly from $4,097 to $4,411 (+7.7%), but this     │", WHITE),
+        ("│  masks underlying weakness. New customer acquisition dropped   │", WHITE),
+        ("│  65.4% while churn increased 16%. Retention is the only thing  │", WHITE),
+        ("│  keeping this app alive.                                       │", WHITE),
+        ("│                                                                │", MAGENTA),
+        ("│  Revenue Analysis                                              │", CYAN),
+        ("│                                                                │", MAGENTA),
+        ("│  • ARPU: $1.80/month across 2,528 active subscriptions         │", WHITE),
+        ("│  • Revenue volatile: $3,672 to $8,101 range                    │", ORANGE),
+        ("│  • Heavy reliance on annual subscription cycles                │", WHITE),
+        ("│                                                                │", MAGENTA),
+        ("│  Retention & Churn                                             │", CYAN),
+        ("│                                                                │", MAGENTA),
+        ("│  • Churn increased 16% (2,130 → 2,470)                         │", RED),
+        ("│  • Active subs only grew 6.1% — barely treading water          │", ORANGE),
+        ("│  • New acquisitions barely offsetting losses                    │", WHITE),
+        ("│                                                                │", MAGENTA),
+    ], title="AI Analysis Output (1/2) — Real Dark Noise Data", duration=6.0)
+    t.add_transition(6)
+
+    # AI analysis output - part 2: Strategic recommendations
+    t.add_static([
+        ("│  Strategic Recommendations                                     │", CYAN),
+        ("│                                                                │", MAGENTA),
+        ("│  1. Emergency Acquisition Audit (Week 1)                       │", BRIGHT_GREEN),
+        ("│     New customers dropped 65.4% — this is code red.            │", WHITE),
+        ("│     Expected impact: +20-30% recovery within 60 days           │", DIM),
+        ("│                                                                │", MAGENTA),
+        ("│  2. Trial-to-Paid Conversion Optimization (Week 2-4)           │", BRIGHT_GREEN),
+        ("│     Conversions down 60.1%. A/B test onboarding flows.         │", WHITE),
+        ("│     Expected impact: +15-25% conversion improvement            │", DIM),
+        ("│                                                                │", MAGENTA),
+        ("│  3. Retention Deep Dive (Week 2-6)                             │", BRIGHT_GREEN),
+        ("│     Exit surveys + proactive retention campaigns.              │", WHITE),
+        ("│     Expected impact: -10-15% churn reduction                   │", DIM),
+        ("│                                                                │", MAGENTA),
+        ("│  4. Pricing Strategy Review (Month 2)                          │", BRIGHT_GREEN),
+        ("│     At $1.80 ARPU, likely underpriced for value delivered.     │", WHITE),
+        ("│     Expected impact: +20-40% ARPU increase                     │", DIM),
+        ("│                                                                │", MAGENTA),
+        ("│  Bottom line: 2-3 months to reverse trends before death spiral │", YELLOW),
+        ("│                                                                │", MAGENTA),
+        ("╰────────────────────────────────────────────────────────────────╯", MAGENTA),
+        ("", WHITE),
+        ("  Not a generic report. Real data → specific, actionable advice.", GREEN),
+    ], title="AI Analysis Output (2/2) — Strategic Recommendations", duration=7.0)
     t.add_transition()
 
-    # --- Scene 9: Report (10s) ---
+    # ===== Scene 8: Report Generator (5s) =====
     t.add_typing_scene([
-        ("type", ("$ rc-insights report --start 2024-01-01 --end 2025-12-31 -o report.html", GREEN)),
+        ("type", ("$ rc-insights report --start 2024-01-01 --end 2025-12-31 -o report.html", PROMPT_COLOR)),
         ("pause", 0.4),
         ("output", [
             ("Fetching overview metrics...", CYAN),
             ("Fetching health charts...", CYAN),
-        ]),
-        ("pause", 0.3),
-        ("output", [
-            ("  ✓ mrr: 24 data points", GREEN),
-            ("  ✓ revenue: 24 data points", GREEN),
-            ("  ✓ churn: 24 data points", GREEN),
-            ("  ✓ actives: 24 data points", GREEN),
-            ("  ✓ trial_conversion_rate: 23 data points", GREEN),
-            ("  ✓ ltv_per_paying_customer: 24 data points", GREEN),
-        ]),
-        ("pause", 0.3),
-        ("output", [
             ("Generating report...", CYAN),
-            ("Report saved to report.html", GREEN),
+            ("Report saved to report.html ✓", GREEN),
             ("", WHITE),
-            ("Key Insights:", CYAN),
-            ("  • MRR grew 7.7% ($4,097 → $4,411)", WHITE),
-            ("  • Active subscriptions +143 over the period", WHITE),
-            ("  • LTV per paying customer: $146.00", WHITE),
-            ("  • Retention is the primary growth driver", GREEN),
+            ("  The report includes:", CYAN),
+            ("  ✓ Overview cards (MRR, subs, trials, revenue)", WHITE),
+            ("  ✓ Interactive Plotly charts — zoom, hover, pan", WHITE),
+            ("  ✓ 6 key charts: MRR, revenue, churn, actives, conversion, LTV", WHITE),
+            ("  ✓ Auto-generated insights with trend analysis", WHITE),
+            ("  ✓ Dark theme, responsive, presentation-ready", WHITE),
+            ("", WHITE),
+            ("  Live demo → maruyamakoju.github.io/rc-insights", GREEN),
         ]),
         ("pause", 2.5),
-    ], title="Report Generator")
+    ], title="HTML Report Generator")
     t.add_transition()
 
-    # --- Scene 10: Report features (6s) ---
+    # ===== Scene 9: What makes this different (4s) =====
     t.add_static([
         ("", WHITE),
-        ("  The HTML report includes:", CYAN),
+        ("  What makes rc-insights different?", CYAN),
         ("", WHITE),
-        ("  ✓  Overview metric cards (MRR, subs, trials, revenue)", WHITE),
-        ("  ✓  Interactive Plotly charts — zoom, hover, pan", WHITE),
-        ("  ✓  6 key charts: MRR, revenue, churn, actives, conversion, LTV", WHITE),
-        ("  ✓  Auto-generated insights with trend analysis", WHITE),
-        ("  ✓  Churn warnings and conversion benchmarks", WHITE),
-        ("  ✓  Dark theme, responsive, presentation-ready", WHITE),
+        ("  Other tools wrap the API.                           rc-insights thinks.", MAGENTA),
         ("", WHITE),
-        ("  Live demo: maruyamakoju.github.io/rc-insights", GREEN),
+        ("  ┌──────────────────────┐    ┌──────────────────────────────────────┐", DIM),
+        ("  │  Typical SDK         │    │  rc-insights                         │", DIM),
+        ("  ├──────────────────────┤    ├──────────────────────────────────────┤", DIM),
+        ("  │  Fetch data          │ →  │  Fetch data                          │", WHITE),
+        ("  │  Return JSON         │    │  Parse into typed models             │", WHITE),
+        ("  │  (that's it)         │    │  Auto-generate insights              │", WHITE),
+        ("  │                      │    │  Feed to Claude for strategic advice  │", GREEN),
+        ("  │                      │    │  Render interactive HTML reports      │", GREEN),
+        ("  │                      │    │  Recommend specific, numbered actions │", GREEN),
+        ("  └──────────────────────┘    └──────────────────────────────────────┘", DIM),
         ("", WHITE),
-        ("  No BI tool needed. Just: pip install rc-insights", DIM),
-    ], title="Report Features", duration=6.0)
+        ("  From raw API → actionable strategy in one command.", YELLOW),
+    ], title="Not Just a Wrapper", duration=6.0)
     t.add_transition()
 
-    # --- Scene 11: Closing (5s) ---
+    # ===== Scene 10: Closing (5s) =====
     t.add_closing(5.0)
 
-    # --- Fade out (1s) ---
+    # Fade out
     for fi in range(FPS):
         alpha = 1.0 - (fi / FPS)
         last = t.frames[-1]
