@@ -1,0 +1,265 @@
+"""HTML report generator with embedded Plotly charts."""
+
+from __future__ import annotations
+
+import json
+from typing import Optional
+
+from rc_insights.models import ChartData, OverviewMetrics
+
+
+def _make_plotly_chart(chart: ChartData, measure_index: int = 0) -> str:
+    """Generate a Plotly JS chart div + script."""
+    series = chart.to_dict_series(measure_index)
+    if not series["dates"]:
+        return f"<p>No data available for {chart.display_name}</p>"
+
+    measure = chart.measures[measure_index] if chart.measures else None
+    unit = measure.unit if measure else ""
+    title = chart.display_name
+
+    chart_id = f"chart-{chart.name}-{measure_index}"
+    y_prefix = "$" if unit == "$" else ""
+    y_suffix = "%" if unit == "%" else ""
+
+    trace = {
+        "x": series["dates"],
+        "y": series["values"],
+        "type": "scatter",
+        "mode": "lines+markers",
+        "fill": "tozeroy",
+        "line": {"color": "#1DB954", "width": 2},
+        "marker": {"size": 5},
+        "name": title,
+    }
+
+    layout = {
+        "title": {"text": title, "font": {"size": 16}},
+        "xaxis": {"title": "Date"},
+        "yaxis": {
+            "title": f"{title} ({unit})" if unit else title,
+            "tickprefix": y_prefix,
+            "ticksuffix": y_suffix,
+        },
+        "plot_bgcolor": "#1a1a2e",
+        "paper_bgcolor": "#16213e",
+        "font": {"color": "#e0e0e0"},
+        "margin": {"t": 50, "b": 50, "l": 70, "r": 30},
+    }
+
+    return f"""
+    <div id="{chart_id}" style="width:100%;height:350px;margin-bottom:24px;"></div>
+    <script>
+      Plotly.newPlot("{chart_id}", [{json.dumps(trace)}], {json.dumps(layout)},
+        {{responsive: true, displayModeBar: false}});
+    </script>
+    """
+
+
+def _metric_card(label: str, value: str, description: str = "") -> str:
+    return f"""
+    <div class="metric-card">
+      <div class="metric-value">{value}</div>
+      <div class="metric-label">{label}</div>
+      <div class="metric-desc">{description}</div>
+    </div>
+    """
+
+
+def generate_report(
+    overview: OverviewMetrics,
+    charts: dict[str, ChartData],
+    start_date: str,
+    end_date: str,
+) -> str:
+    """Generate a complete HTML subscription health report."""
+
+    # Build overview cards
+    cards_html = ""
+    for m in overview.metrics:
+        cards_html += _metric_card(m.name, m.formatted_value, m.description)
+
+    # Build chart sections
+    charts_html = ""
+    chart_order = ["mrr", "revenue", "churn", "actives", "trial_conversion_rate", "ltv_per_paying_customer"]
+    for name in chart_order:
+        if name in charts:
+            charts_html += _make_plotly_chart(charts[name])
+
+    # Compute insights
+    insights = _compute_insights(overview, charts)
+    insights_html = "\n".join(f"<li>{i}</li>" for i in insights)
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subscription Health Report | rc-insights</title>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <style>
+    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f23;
+      color: #e0e0e0;
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }}
+    h1 {{
+      font-size: 28px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #1DB954, #00d4ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }}
+    .subtitle {{ color: #888; margin-bottom: 32px; font-size: 14px; }}
+    .metrics-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 40px;
+    }}
+    .metric-card {{
+      background: #16213e;
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #1a1a3e;
+    }}
+    .metric-value {{
+      font-size: 28px;
+      font-weight: 700;
+      color: #1DB954;
+    }}
+    .metric-label {{
+      font-size: 14px;
+      color: #aaa;
+      margin-top: 4px;
+    }}
+    .metric-desc {{
+      font-size: 12px;
+      color: #666;
+      margin-top: 2px;
+    }}
+    .section-title {{
+      font-size: 20px;
+      margin: 32px 0 16px;
+      color: #00d4ff;
+    }}
+    .insights {{
+      background: #16213e;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+      border-left: 4px solid #1DB954;
+    }}
+    .insights ul {{ padding-left: 20px; }}
+    .insights li {{ margin-bottom: 8px; line-height: 1.6; }}
+    .footer {{
+      text-align: center;
+      color: #555;
+      font-size: 12px;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid #1a1a3e;
+    }}
+    .footer a {{ color: #1DB954; text-decoration: none; }}
+  </style>
+</head>
+<body>
+  <h1>Subscription Health Report</h1>
+  <p class="subtitle">Period: {start_date} to {end_date} &middot; Generated by rc-insights</p>
+
+  <h2 class="section-title">Overview</h2>
+  <div class="metrics-grid">
+    {cards_html}
+  </div>
+
+  <h2 class="section-title">Key Insights</h2>
+  <div class="insights">
+    <ul>{insights_html}</ul>
+  </div>
+
+  <h2 class="section-title">Trends</h2>
+  {charts_html}
+
+  <div class="footer">
+    Generated by <a href="https://github.com/maruyamakoju/rc-insights">rc-insights</a>
+    &middot; Powered by RevenueCat Charts API v2
+  </div>
+</body>
+</html>"""
+
+
+def _compute_insights(
+    overview: OverviewMetrics,
+    charts: dict[str, ChartData],
+) -> list[str]:
+    """Derive actionable insights from the data."""
+    insights: list[str] = []
+
+    # MRR trend
+    if "mrr" in charts:
+        series = charts["mrr"].to_series()
+        if len(series) >= 2:
+            first_val = series[0][1]
+            last_val = series[-1][1]
+            if first_val > 0:
+                change_pct = ((last_val - first_val) / first_val) * 100
+                direction = "grew" if change_pct > 0 else "declined"
+                insights.append(
+                    f"MRR {direction} by {abs(change_pct):.1f}% over the period "
+                    f"(${first_val:,.2f} → ${last_val:,.2f})."
+                )
+
+    # Churn
+    if "churn" in charts:
+        series = charts["churn"].to_series()
+        if series:
+            avg_churn = sum(v for _, v in series) / len(series)
+            latest = series[-1][1]
+            insights.append(
+                f"Average churn rate: {avg_churn:.2f}%. "
+                f"Latest period: {latest:.2f}%."
+            )
+            if avg_churn > 8:
+                insights.append(
+                    "Churn is above 8% — consider improving onboarding, "
+                    "adding engagement features, or reviewing pricing."
+                )
+
+    # Trial conversion
+    if "trial_conversion_rate" in charts:
+        series = charts["trial_conversion_rate"].to_series()
+        if series:
+            avg_conv = sum(v for _, v in series) / len(series)
+            insights.append(
+                f"Average trial-to-paid conversion: {avg_conv:.1f}%."
+            )
+            if avg_conv < 15:
+                insights.append(
+                    "Trial conversion is below 15% — experiment with trial length, "
+                    "onboarding emails, or paywall messaging."
+                )
+
+    # Active subscribers
+    if "actives" in charts:
+        series = charts["actives"].to_series()
+        if len(series) >= 2:
+            growth = series[-1][1] - series[0][1]
+            insights.append(
+                f"Active subscriptions changed by {growth:+,.0f} over the period."
+            )
+
+    # LTV
+    if "ltv_per_paying_customer" in charts:
+        series = charts["ltv_per_paying_customer"].to_series()
+        if series:
+            latest_ltv = series[-1][1]
+            insights.append(f"Latest realized LTV per paying customer: ${latest_ltv:,.2f}.")
+
+    if not insights:
+        insights.append("Insufficient data to generate insights for this period.")
+
+    return insights
