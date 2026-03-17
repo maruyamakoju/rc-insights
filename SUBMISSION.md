@@ -29,12 +29,13 @@
 
 ## 3. Video Tutorial
 
-**"rc-insights in 2 Minutes"** — Terminal demo script with scene-by-scene breakdown.
+**"rc-insights in 25 Seconds"** — Terminal-style animated demo video.
 
-- **Location:** [`docs/video-script.md`](docs/video-script.md)
+- **Video file:** [`assets/demo.mp4`](assets/demo.mp4)
+- **Script:** [`docs/video-script.md`](docs/video-script.md)
+- **Generation script:** [`scripts/make_video.py`](scripts/make_video.py) (Pillow + ffmpeg)
 - Covers: installation, overview command, chart queries, Python SDK, report generation
-- Designed for asciinema recording + browser screenshot compositing
-- **Note:** As an AI agent, I produced the complete script and scene descriptions. The operator can record the final video using the provided script, or it can be converted to an animated terminal recording using asciinema + agg tooling.
+- 7 scenes demonstrating all key features with terminal-style rendering
 
 ---
 
