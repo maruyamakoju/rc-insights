@@ -2,7 +2,7 @@
 
 **Candidate:** Mujin (@maruyamakoju)
 **Agent:** Claude (Anthropic, Opus 4.6) operating via [agent-harness](https://github.com/maruyamakoju/agent-harness)
-**Date:** March 16, 2026
+**Date:** March 17, 2026
 
 ---
 
@@ -11,6 +11,8 @@
 **rc-insights** — Python SDK, CLI, and HTML report generator for RevenueCat Charts API v2.
 
 - **GitHub Repository:** [github.com/maruyamakoju/rc-insights](https://github.com/maruyamakoju/rc-insights)
+- **Live Report Demo:** [maruyamakoju.github.io/rc-insights](https://maruyamakoju.github.io/rc-insights/) — interactive HTML report generated from real Dark Noise data
+- **PyPI:** `pip install rc-insights` ([pypi.org/project/rc-insights](https://pypi.org/project/rc-insights/))
 - **Features:** Typed SDK for all 21 chart endpoints, CLI with Rich terminal output, interactive HTML report with Plotly charts and auto-generated insights
 - **Tests:** 13 passing (pytest + respx mocking)
 - **Real data:** Tested against Dark Noise via the provided API key
@@ -23,19 +25,18 @@
 
 - **Location:** [`docs/blog-post.md`](docs/blog-post.md)
 - Includes code snippets, architecture diagram, real data analysis from Dark Noise, and CTA
-- Ready for cross-posting to Dev.to / Hashnode
+- Publishing scripts included: [`scripts/publish_devto.py`](scripts/publish_devto.py), [`scripts/publish_hashnode.py`](scripts/publish_hashnode.py)
 
 ---
 
-## 3. Video Tutorial
+## 3. Video Tutorial (77 seconds)
 
-**"rc-insights in 25 Seconds"** — Terminal-style animated demo video.
+**"rc-insights Demo"** — Terminal-style animated demo with typing animation, 1080p.
 
 - **Video file:** [`assets/demo.mp4`](assets/demo.mp4)
-- **Script:** [`docs/video-script.md`](docs/video-script.md)
-- **Generation script:** [`scripts/make_video.py`](scripts/make_video.py) (Pillow + ffmpeg)
-- Covers: installation, overview command, chart queries, Python SDK, report generation
-- 7 scenes demonstrating all key features with terminal-style rendering
+- **Generation script:** [`scripts/make_video.py`](scripts/make_video.py) (Pillow + ffmpeg, fully reproducible)
+- **11 scenes:** title card, problem statement, installation, overview command, MRR chart, JSON output, Python SDK, segmentation, report generation, report features, closing CTA
+- Features typing animation with blinking cursor, color-coded output, fade transitions
 
 ---
 
@@ -87,13 +88,20 @@ rc-insights/
 │   ├── quick_start.py
 │   ├── generate_report.py
 │   └── segmented_analysis.py
+├── scripts/               # Tooling
+│   ├── make_video.py      # Video generator (Pillow + ffmpeg)
+│   ├── publish_devto.py   # Dev.to blog publisher
+│   └── publish_hashnode.py # Hashnode blog publisher
+├── assets/
+│   └── demo.mp4           # Demo video (77s, 1080p)
 ├── docs/                  # Content deliverables
-│   ├── blog-post.md
-│   ├── social-posts.md
-│   ├── growth-campaign.md
-│   ├── video-script.md
-│   └── process-log.md
-├── report.html            # Sample report (generated from Dark Noise data)
+│   ├── blog-post.md       # 1,800+ word launch blog post
+│   ├── social-posts.md    # 5 Twitter/X posts
+│   ├── growth-campaign.md # $100 growth campaign strategy
+│   ├── video-script.md    # Video script & production notes
+│   └── process-log.md     # Full process log
+├── dist/                  # PyPI distribution files
+├── report.html            # Sample report (Dark Noise real data)
 ├── pyproject.toml
 ├── README.md
 └── SUBMISSION.md          # This file
@@ -101,4 +109,4 @@ rc-insights/
 
 ---
 
-*All deliverables were produced autonomously by Claude (Anthropic) running inside agent-harness. No human editing was applied to the content.*
+*All deliverables were produced autonomously by Claude (Anthropic, Opus 4.6) running inside [agent-harness](https://github.com/maruyamakoju/agent-harness) — a 24/7 autonomous coding system. No human editing was applied to the content.*
