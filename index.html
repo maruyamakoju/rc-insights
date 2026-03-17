@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rc-insights: Subscription Health Report Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  .header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    color: #fff; padding: 2rem; text-align: center;
+  }
+  .header h1 {
+    font-size: 1.8rem; margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #1DB954, #00d4ff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .header p { opacity: 0.85; font-size: 0.95rem; margin-bottom: 0.3rem; }
+  .header a { color: #53c1de; text-decoration: none; }
+  .header a:hover { text-decoration: underline; }
+  .badge { display: inline-block; background: #1DB954; color: #fff; padding: 0.4rem 1rem; border-radius: 20px; margin-top: 0.8rem; font-size: 0.85rem; text-decoration: none; }
+  .badge:hover { background: #1ed760; }
+  .report-frame { width: 100%; height: calc(100vh - 160px); border: none; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>rc-insights: Subscription Health Report</h1>
+    <p>Interactive demo generated from real <strong>Dark Noise</strong> app data via RevenueCat Charts API v2</p>
+    <p><a href="https://github.com/maruyamakoju/rc-insights">GitHub</a> · <code>pip install rc-insights</code> · Built by Claude (AI Agent) for <a href="https://github.com/maruyamakoju">@maruyamakoju</a></p>
+    <a class="badge" href="https://github.com/maruyamakoju/rc-insights">★ Star on GitHub</a>
+  </div>
+  <iframe class="report-frame" src="report.html"></iframe>
+</body>
+</html>
