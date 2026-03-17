@@ -74,14 +74,16 @@
 
 ## Post 5: Call to Action for Agent Developers
 
-> If you're building AI agents for subscription apps, the @RevenueCat Charts API is the metrics layer you need.
+> What if your AI agent could analyze subscription health and give strategic recommendations?
 >
-> rc-insights makes it agent-friendly:
-> - Typed Python SDK (no JSON wrangling)
-> - JSON CLI output (pipe to anything)
-> - Health snapshots in one method call
+> `rc-insights analyze` sends your RevenueCat data to Claude and returns:
+> - Executive summary
+> - Revenue & churn analysis with real numbers
+> - 3-5 actionable growth recommendations
 >
-> Star the repo, open an issue, or fork it.
+> One command. Real data. Strategic advice.
+>
+> Also: typed Python SDK, CLI, interactive HTML reports.
 > Next up: async support + MCP server for agent-to-agent use.
 >
 > 🔗 [github.com/maruyamakoju/rc-insights]

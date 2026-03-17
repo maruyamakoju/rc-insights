@@ -8,12 +8,13 @@
 
 ## 1. Tool / Resource
 
-**rc-insights** — Python SDK, CLI, and HTML report generator for RevenueCat Charts API v2.
+**rc-insights** — Python SDK, CLI, AI-powered analyzer, and HTML report generator for RevenueCat Charts API v2.
 
 - **GitHub Repository:** [github.com/maruyamakoju/rc-insights](https://github.com/maruyamakoju/rc-insights)
 - **Live Report Demo:** [maruyamakoju.github.io/rc-insights](https://maruyamakoju.github.io/rc-insights/) — interactive HTML report generated from real Dark Noise data
 - **PyPI:** `pip install rc-insights` ([pypi.org/project/rc-insights](https://pypi.org/project/rc-insights/))
-- **Features:** Typed SDK for all 21 chart endpoints, CLI with Rich terminal output, interactive HTML report with Plotly charts and auto-generated insights
+- **Key differentiator: AI-Powered Analysis** — `rc-insights analyze` fetches all key metrics and sends them to Claude for strategic recommendations. Not just a wrapper — it turns raw data into actionable growth advice like a senior subscription analyst would provide.
+- **Features:** Typed SDK for all 21 chart endpoints, CLI with Rich terminal output, AI analysis via Claude, interactive HTML report with Plotly charts and auto-generated insights
 - **Tests:** 13 passing (pytest + respx mocking)
 - **Real data:** Tested against Dark Noise via the provided API key
 
@@ -79,7 +80,8 @@ rc-insights/
 │   ├── __init__.py
 │   ├── client.py          # API client (auth, retry, all 21 charts)
 │   ├── models.py          # Typed dataclasses for API responses
-│   ├── cli.py             # Click CLI (overview, chart, report)
+│   ├── cli.py             # Click CLI (overview, chart, report, analyze)
+│   ├── analyzer.py        # AI-powered analysis via Claude API
 │   └── report.py          # HTML report generator (Plotly + insights)
 ├── tests/                 # 13 unit tests
 │   ├── test_models.py

@@ -25,7 +25,8 @@ That's why I built **rc-insights**.
 
 1. **A Python SDK** — typed models, automatic rate-limit retry, and helper methods for all 21 chart types
 2. **A CLI tool** — check your metrics from the terminal in one command
-3. **An HTML report generator** — interactive Plotly charts with auto-generated insights
+3. **AI-powered analysis** — `rc-insights analyze` sends your data to Claude for strategic recommendations
+4. **An HTML report generator** — interactive Plotly charts with auto-generated insights
 
 ### Installation
 
@@ -66,6 +67,12 @@ That's it. No manual HTTP calls, no timestamp conversion, no JSON parsing. The `
 │  │ Retry    │  │ Overview │  │ Metric cards        │ │
 │  │ Rate lim │  │ Options  │  │ Auto-insights       │ │
 │  └────┬─────┘  └──────────┘  └─────────────────────┘ │
+│       │         ┌──────────┐                          │
+│       │         │ Analyzer │  ← Claude API            │
+│       │         │ ──────── │                          │
+│       │         │ Strategic│                          │
+│       │         │ analysis │                          │
+│       │         └──────────┘                          │
 │       │                                               │
 ├───────┼───────────────────────────────────────────────┤
 │       ▼                                               │
@@ -173,6 +180,30 @@ for seg in options.segments:
 ```
 
 Segmentation is where the Charts API really shines for growth work. You can programmatically identify which countries drive the most revenue, which products convert best, or how churn varies by subscription duration — all without leaving your Python script.
+
+## AI-Powered Analysis: From Data to Strategy in One Command
+
+This is where rc-insights goes beyond being a wrapper. The `analyze` command doesn't just fetch your data — it feeds all your key metrics (MRR trends, churn patterns, trial conversion, LTV, active subs, and more) into Claude, Anthropic's AI, and returns a strategic analysis with specific, actionable recommendations.
+
+```bash
+$ export ANTHROPIC_API_KEY=sk-ant-...
+$ rc-insights analyze --start 2024-01-01 --end 2025-12-31
+```
+
+The AI analyzes your data like a senior subscription analyst would — identifying concerning trends, highlighting what's working, and recommending concrete next steps with expected impact. It's not a generic "improve your churn" — it references your actual numbers and patterns.
+
+```python
+from rc_insights import RCInsights
+from rc_insights.analyzer import analyze_subscription_health
+
+with RCInsights(api_key="sk_...", project_id="proj...") as rc:
+    overview = rc.overview()
+    charts = rc.health_snapshot(start_date="2024-01-01", end_date="2025-12-31")
+    analysis = analyze_subscription_health(overview, charts, "2024-01-01", "2025-12-31")
+    print(analysis)  # → Markdown-formatted strategic analysis
+```
+
+This is the killer feature for AI agent developers. An agent can now autonomously monitor subscription health, detect anomalies, and generate strategic recommendations — all through a single function call. It's the bridge between raw RevenueCat data and actionable growth strategy.
 
 ## Why I Built This (and What Comes Next)
 
