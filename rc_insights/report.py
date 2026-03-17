@@ -215,32 +215,48 @@ def _compute_insights(
 
     # Churn
     if "churn" in charts:
-        series = charts["churn"].to_series()
+        chart = charts["churn"]
+        series = chart.to_series()
         if series:
+            unit = chart.measures[0].unit if chart.measures else ""
             avg_churn = sum(v for _, v in series) / len(series)
             latest = series[-1][1]
-            insights.append(
-                f"Average churn rate: {avg_churn:.2f}%. "
-                f"Latest period: {latest:.2f}%."
-            )
-            if avg_churn > 8:
+            if unit == "%":
                 insights.append(
-                    "Churn is above 8% — consider improving onboarding, "
-                    "adding engagement features, or reviewing pricing."
+                    f"Average churn rate: {avg_churn:.2f}%. "
+                    f"Latest period: {latest:.2f}%."
+                )
+                if avg_churn > 8:
+                    insights.append(
+                        "Churn is above 8% — consider improving onboarding, "
+                        "adding engagement features, or reviewing pricing."
+                    )
+            else:
+                # Absolute churn numbers
+                insights.append(
+                    f"Average monthly churn: {avg_churn:,.0f} subscriptions. "
+                    f"Latest period: {latest:,.0f}."
                 )
 
     # Trial conversion
     if "trial_conversion_rate" in charts:
-        series = charts["trial_conversion_rate"].to_series()
+        chart = charts["trial_conversion_rate"]
+        series = chart.to_series()
         if series:
+            unit = chart.measures[0].unit if chart.measures else ""
             avg_conv = sum(v for _, v in series) / len(series)
-            insights.append(
-                f"Average trial-to-paid conversion: {avg_conv:.1f}%."
-            )
-            if avg_conv < 15:
+            if unit == "%":
                 insights.append(
-                    "Trial conversion is below 15% — experiment with trial length, "
-                    "onboarding emails, or paywall messaging."
+                    f"Average trial-to-paid conversion: {avg_conv:.1f}%."
+                )
+                if avg_conv < 15:
+                    insights.append(
+                        "Trial conversion is below 15% — experiment with trial length, "
+                        "onboarding emails, or paywall messaging."
+                    )
+            else:
+                insights.append(
+                    f"Average monthly trial conversions: {avg_conv:,.0f}."
                 )
 
     # Active subscribers
