@@ -1,13 +1,16 @@
 # rc-insights
 
-> Python SDK and CLI for RevenueCat Charts API v2 — subscription analytics made simple.
+> Python SDK, CLI, and AI-powered analyzer for RevenueCat Charts API v2.
 
-**rc-insights** gives you a clean Python interface to [RevenueCat's Charts API](https://www.revenuecat.com/docs/api-v2), plus a CLI and an HTML report generator. Built for indie developers, growth teams, and AI agents that need programmatic access to subscription metrics.
+**rc-insights** gives you a clean Python interface to [RevenueCat's Charts API](https://www.revenuecat.com/docs/api-v2), plus a CLI, an HTML report generator, and **AI-powered strategic analysis** via Claude. Built for indie developers, growth teams, and AI agents that need programmatic access to subscription metrics.
+
+**[Live Demo](https://maruyamakoju.github.io/rc-insights/)** — Interactive report generated from real app data.
 
 ## Features
 
 - **Python SDK** — Clean, typed client for all 21 chart endpoints + overview metrics
 - **CLI** — `rc-insights overview`, `rc-insights chart mrr`, `rc-insights report`
+- **AI Analysis** — `rc-insights analyze` sends your data to Claude for strategic recommendations
 - **HTML Reports** — Beautiful, interactive subscription health reports with Plotly charts
 - **Auto-insights** — Automatic trend analysis, churn alerts, and conversion benchmarks
 - **Rate-limit handling** — Built-in retry with exponential backoff
@@ -71,6 +74,28 @@ with RCInsights(api_key="sk_...", project_id="proj...") as rc:
 
 with open("report.html", "w") as f:
     f.write(html)
+```
+
+## AI-Powered Analysis
+
+Get strategic recommendations from Claude based on your actual subscription data:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+rc-insights analyze --start 2024-01-01 --end 2024-12-31
+```
+
+Claude analyzes your MRR trends, churn patterns, trial conversion, LTV, and more — then returns actionable recommendations like a senior growth advisor would.
+
+```python
+from rc_insights import RCInsights
+from rc_insights.analyzer import analyze_subscription_health
+
+with RCInsights(api_key="sk_...", project_id="proj...") as rc:
+    overview = rc.overview()
+    charts = rc.health_snapshot(start_date="2024-01-01", end_date="2024-12-31")
+    analysis = analyze_subscription_health(overview, charts, "2024-01-01", "2024-12-31")
+    print(analysis)
 ```
 
 ## Supported Charts (21 total)

@@ -156,5 +156,80 @@ def report(start_date, end_date, resolution, output):
     console.print(f"[green]Report saved to {output}[/]")
 
 
+@cli.command()
+@click.option("--start", "start_date", default=None, help="Start date (YYYY-MM-DD)")
+@click.option("--end", "end_date", default=None, help="End date (YYYY-MM-DD)")
+@click.option("--resolution", "-r", default="month")
+@click.option("--model", "-m", default="claude-sonnet-4-20250514", help="Claude model to use")
+@click.option("--output", "-o", default=None, help="Save analysis to file")
+def analyze(start_date, end_date, resolution, model, output):
+    """AI-powered subscription analysis using Claude.
+
+    Fetches all key metrics, sends them to Claude, and returns
+    a strategic analysis with actionable recommendations.
+
+    Requires ANTHROPIC_API_KEY environment variable.
+    """
+    if not start_date or not end_date:
+        start_date, end_date = _default_dates()
+
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not anthropic_key:
+        console.print("[red]Error:[/] Set ANTHROPIC_API_KEY environment variable.")
+        console.print("[dim]Get your key at: https://console.anthropic.com/settings/keys[/]")
+        sys.exit(1)
+
+    from rc_insights.analyzer import analyze_subscription_health
+
+    with _get_client() as rc:
+        console.print("[cyan]Fetching overview metrics...[/]")
+        overview_data = rc.overview()
+
+        # Fetch extended set of charts for deeper analysis
+        console.print("[cyan]Fetching charts for analysis...[/]")
+        chart_names = [
+            "mrr", "revenue", "churn", "actives",
+            "trial_conversion_rate", "ltv_per_paying_customer",
+            "actives_new", "trials", "customers_new",
+        ]
+        charts = {}
+        for name in chart_names:
+            try:
+                charts[name] = rc.chart(
+                    name,
+                    start_date=start_date,
+                    end_date=end_date,
+                    resolution=resolution,
+                )
+                console.print(f"  [green]✓[/] {name}")
+            except Exception as e:
+                console.print(f"  [dim]✗ {name}: {e}[/]")
+
+    console.print(f"[cyan]Analyzing with Claude ({model})...[/]")
+    console.print()
+
+    try:
+        analysis = analyze_subscription_health(
+            overview_data, charts, start_date, end_date,
+            anthropic_api_key=anthropic_key, model=model,
+        )
+    except Exception as e:
+        console.print(f"[red]Analysis failed:[/] {e}")
+        sys.exit(1)
+
+    from rich.markdown import Markdown
+    console.print(Panel(
+        Markdown(analysis),
+        title="[bold cyan]AI Subscription Analysis[/]",
+        border_style="cyan",
+        padding=(1, 2),
+    ))
+
+    if output:
+        with open(output, "w", encoding="utf-8") as f:
+            f.write(analysis)
+        console.print(f"\n[green]Analysis saved to {output}[/]")
+
+
 if __name__ == "__main__":
     cli()
